@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memento Mori — Life in Weeks</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fafaf9;
+      --ink: #1a1a1a;
+      --ink-muted: #6b6b6b;
+      --ink-faint: #a3a3a3;
+      --past: #2d2d2d;
+      --current: #e63946;
+      --future-bd: #e0e0e0;
+    }
+
+    html, body { min-height: 100vh; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 56px 20px 48px;
+      min-height: 100vh;
+    }
+
+    /* ── Heading ── */
+    .title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-align: center;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      text-align: center;
+      margin-bottom: 44px;
+    }
+
+    /* ── Initial input screen ── */
+    .input-card {
+      background: #fff;
+      border: 1px solid #ececec;
+      border-radius: 6px;
+      padding: 36px 40px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+
+    .input-prompt {
+      font-size: 14px;
+      color: var(--ink-muted);
+      line-height: 1.6;
+      margin-bottom: 22px;
+    }
+
+    .date-input {
+      width: 100%;
+      padding: 11px 14px;
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #d4d4d4;
+      border-radius: 4px;
+      outline: none;
+      margin-bottom: 14px;
+      -webkit-appearance: none;
+      transition: border-color 0.15s;
+    }
+    .date-input:focus { border-color: var(--ink); }
+
+    .begin-btn {
+      width: 100%;
+      padding: 12px 20px;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .begin-btn:hover { background: #000; }
+
+    .input-error {
+      font-size: 12px;
+      color: var(--current);
+      margin-top: 10px;
+      min-height: 16px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 8px;
+      text-align: left;
+    }
+
+    .gender-pills {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .gender-pill {
+      flex: 1;
+      padding: 9px 8px;
+      background: #fff;
+      border: 1px solid #d4d4d4;
+      color: var(--ink-muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      border-radius: 4px;
+      text-transform: capitalize;
+      transition: all 0.15s;
+    }
+    .gender-pill:hover { border-color: var(--ink); color: var(--ink); }
+    .gender-pill.selected {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    /* ── Step flow ── */
+    .step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .step-back {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 11px;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 4px 6px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-radius: 3px;
+    }
+    .step-back:hover { color: var(--ink); }
+    .step-back.hidden { visibility: hidden; }
+
+    .step-num {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      font-weight: 600;
+    }
+
+    .step-spacer { width: 50px; }
+
+    .step-question {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .step-summary {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 20px;
+      font-variant-numeric: tabular-nums;
+      min-height: 14px;
+    }
+
+    .step-grid {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .step-grid.year { grid-template-columns: repeat(5, 1fr); }
+    @media (min-width: 480px) { .step-grid.year { grid-template-columns: repeat(6, 1fr); } }
+    @media (min-width: 580px) { .step-grid.year { grid-template-columns: repeat(7, 1fr); } }
+    @media (min-width: 660px) { .step-grid.year { grid-template-columns: repeat(8, 1fr); } }
+    @media (min-width: 740px) { .step-grid.year { grid-template-columns: repeat(9, 1fr); } }
+    @media (min-width: 820px) { .step-grid.year { grid-template-columns: repeat(10, 1fr); } }
+
+    .input-card.year-card { max-width: 760px; }
+    .step-grid.month { grid-template-columns: repeat(3, 1fr); }
+    .step-grid.day   { grid-template-columns: repeat(7, 1fr); }
+
+    .step-btn {
+      padding: 9px 4px;
+      background: #fff;
+      border: 1px solid #d8d8d8;
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.12s;
+      font-variant-numeric: tabular-nums;
+    }
+    .step-btn:hover:not(:disabled) { border-color: var(--ink); }
+    .step-btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .step-btn.selected {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    .step-grid.year::-webkit-scrollbar { width: 6px; }
+    .step-grid.year::-webkit-scrollbar-track { background: transparent; }
+    .step-grid.year::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+    /* ── Grid ── */
+    .grid-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(52, 12px);
+      gap: 4px;
+      margin-bottom: 28px;
+    }
+
+    .week {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      background: transparent;
+      border: 1px solid var(--future-bd);
+      box-sizing: border-box;
+      transform: scale(0.7);
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .week.past {
+      background: #d8d8d8;
+      border-color: #d8d8d8;
+      transform: scale(0.78);
+    }
+
+    .week.past.skull {
+      background: var(--past);
+      border-color: var(--past);
+      transform: scale(1);
+      border-radius: 1.5px;
+    }
+
+    .week.current {
+      background: var(--current);
+      border-color: var(--current);
+      box-shadow: 0 0 0 2px rgba(230,57,70,0.18);
+      transform: scale(1);
+    }
+
+    /* ── Stats ── */
+    .quote {
+      max-width: 460px;
+      margin: 0 auto 28px;
+      text-align: center;
+      text-wrap: balance;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--ink-muted);
+      padding: 0 16px;
+    }
+
+    .quote-attr {
+      display: block;
+      font-style: normal;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-top: 10px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 28px;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--ink-muted);
+      letter-spacing: 0.04em;
+      margin-bottom: 28px;
+    }
+
+    .stat strong {
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .reset-link {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 6px 12px;
+      transition: color 0.15s;
+    }
+    .reset-link:hover { color: var(--ink); }
+
+    /* ── Responsive ── */
+    @media (max-width: 720px) {
+      body { padding: 40px 12px 32px; }
+      .title { font-size: 28px; letter-spacing: 0.14em; }
+      .subtitle { font-size: 11px; margin-bottom: 32px; }
+      .grid { grid-template-columns: repeat(52, 9px); gap: 3px; }
+      .week { width: 9px; height: 9px; border-radius: 1.5px; }
+      .stats { gap: 18px; font-size: 11px; }
+    }
+
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: repeat(52, 7px); gap: 2px; }
+      .week { width: 7px; height: 7px; border-radius: 1px; }
+      .input-card { padding: 28px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1 class="title">MEMENTO MORI</h1>
+  <p class="subtitle">Remember Death</p>
+
+  <div id="app"></div>
+
+<script>
+const STORAGE_KEY = 'memento-mori-v2';
+const LEGACY_KEY  = 'memento-mori-birthdate';
+const WEEKS_PER_YEAR = 52;
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+// US average life expectancy at birth (CDC, recent figures)
+const LIFESPANS = {
+  male:   73,
+  female: 79,
+  other:  76,
+};
+
+// Ephemeral form state
+let formStep   = 'year';
+let formYear   = null;
+let formMonth  = null; // 0–11
+let formDay    = null;
+let formGender = '';
+
+const MONTH_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function daysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function resetForm() {
+  formStep   = 'year';
+  formYear   = null;
+  formMonth  = null;
+  formDay    = null;
+  formGender = '';
+}
+
+// ── Skull pixel map (52 wide × lifespan tall) ──
+let skullMap = null;
+let skullMapH = 0;
+
+function generateSkullMap(years) {
+  const W = WEEKS_PER_YEAR;
+  const H = years;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Y-coordinate helper: proportional to grid height
+  const Y = (frac) => frac * H;
+
+  // Background (non-skull)
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // White skull silhouette
+  ctx.fillStyle = '#fff';
+
+  // Cranium — slightly squashed oval, top of grid
+  ctx.beginPath();
+  ctx.ellipse(26, Y(0.375), 18, Y(0.275), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cheekbones — wider band that flares out
+  ctx.beginPath();
+  ctx.moveTo(7,  Y(0.525));
+  ctx.lineTo(45, Y(0.525));
+  ctx.lineTo(42, Y(0.675));
+  ctx.lineTo(10, Y(0.675));
+  ctx.closePath();
+  ctx.fill();
+
+  // Jaw — rounded chin
+  ctx.beginPath();
+  ctx.moveTo(13, Y(0.65));
+  ctx.lineTo(13, Y(0.775));
+  ctx.quadraticCurveTo(13, Y(0.9), 26, Y(0.913));
+  ctx.quadraticCurveTo(39, Y(0.9), 39, Y(0.775));
+  ctx.lineTo(39, Y(0.65));
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Cut out features (back to background) ──
+  ctx.fillStyle = '#000';
+
+  // Eye sockets — large dark ovals
+  ctx.beginPath();
+  ctx.ellipse(17, Y(0.375), 6, Y(0.1), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(35, Y(0.375), 6, Y(0.1), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Bridge between eye sockets darker line
+  ctx.fillRect(25, Y(0.35), 2, Y(0.05));
+
+  // Nose — inverted triangle / teardrop
+  ctx.beginPath();
+  ctx.moveTo(26, Y(0.475));
+  ctx.lineTo(22, Y(0.6));
+  ctx.lineTo(30, Y(0.6));
+  ctx.closePath();
+  ctx.fill();
+
+  // Mouth line + teeth gaps
+  ctx.fillRect(16, Y(0.7),   20, 1);
+  ctx.fillRect(16, Y(0.775), 20, 1);
+  for (let i = 0; i < 6; i++) {
+    ctx.fillRect(17 + i * 3, Y(0.7125), 1, Y(0.0625));
+  }
+
+  // Read pixels back
+  const data = ctx.getImageData(0, 0, W, H).data;
+  const map = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    map[i] = data[i * 4] > 128 ? 1 : 0; // 1 = skull, 0 = background
+  }
+  return map;
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && d.birth) return d;
+    }
+  } catch(_) {}
+  // Migrate legacy birth-only storage
+  const legacy = localStorage.getItem(LEGACY_KEY);
+  if (legacy) return { birth: legacy, gender: 'other' };
+  return null;
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function clearData() {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(LEGACY_KEY);
+}
+
+function fromISO(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function weeksLived(birthIso) {
+  const birth = fromISO(birthIso);
+  const now = new Date();
+  const ms = now - birth;
+  if (ms < 0) return 0;
+  return Math.floor(ms / MS_PER_WEEK);
+}
+
+function ageInYears(birthIso) {
+  const birth = fromISO(birthIso);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return Math.max(0, age);
+}
+
+function fmtNum(n) {
+  return n.toLocaleString('en-US');
+}
+
+// ── Render: input flow ──
+function renderInput() {
+  const html =
+    formStep === 'year'   ? renderYearStep() :
+    formStep === 'month'  ? renderMonthStep() :
+    formStep === 'day'    ? renderDayStep() :
+    /* gender */            renderGenderStep();
+  document.getElementById('app').innerHTML = html;
+}
+
+function stepHeader(num, total, withBack) {
+  return `<div class="step-header">
+    <button class="step-back ${withBack ? '' : 'hidden'}" onclick="stepBack()">← Back</button>
+    <span class="step-num">Step ${num} of ${total}</span>
+    <span class="step-spacer"></span>
+  </div>`;
+}
+
+function renderYearStep() {
+  const cur = new Date().getFullYear();
+  let cells = '';
+  for (let y = 1900; y <= cur; y++) {
+    const sel = formYear === y ? 'selected' : '';
+    cells += `<button class="step-btn ${sel}" onclick="selectYear(${y})">${y}</button>`;
+  }
+  return `<div class="input-card year-card">
+    ${stepHeader(1, 4, false)}
+    <div class="step-question">What year were you born?</div>
+    <div class="step-summary">&nbsp;</div>
+    <div class="step-grid year">${cells}</div>
+  </div>`;
+}
+
+function renderMonthStep() {
+  const cells = MONTH_SHORT.map((m, i) =>
+    `<button class="step-btn ${formMonth === i ? 'selected' : ''}" onclick="selectMonth(${i})">${m}</button>`
+  ).join('');
+  return `<div class="input-card">
+    ${stepHeader(2, 4, true)}
+    <div class="step-question">Which month?</div>
+    <div class="step-summary">${formYear}</div>
+    <div class="step-grid month">${cells}</div>
+  </div>`;
+}
+
+function renderDayStep() {
+  const total = daysInMonth(formYear, formMonth);
+  let cells = '';
+  for (let d = 1; d <= 31; d++) {
+    if (d > total) {
+      cells += `<button class="step-btn" disabled></button>`;
+    } else {
+      const sel = formDay === d ? 'selected' : '';
+      cells += `<button class="step-btn ${sel}" onclick="selectDay(${d})">${d}</button>`;
+    }
+  }
+  return `<div class="input-card">
+    ${stepHeader(3, 4, true)}
+    <div class="step-question">Which day?</div>
+    <div class="step-summary">${MONTH_LONG[formMonth]} ${formYear}</div>
+    <div class="step-grid day">${cells}</div>
+  </div>`;
+}
+
+function renderGenderStep() {
+  return `<div class="input-card">
+    ${stepHeader(4, 4, true)}
+    <div class="step-question">Select your gender</div>
+    <div class="step-summary">${MONTH_LONG[formMonth]} ${formDay}, ${formYear}</div>
+    <div class="gender-pills" id="gender-pills">
+      <button type="button" class="gender-pill ${formGender==='male'  ? 'selected' : ''}" onclick="selectGender('male')">Male</button>
+      <button type="button" class="gender-pill ${formGender==='female'? 'selected' : ''}" onclick="selectGender('female')">Female</button>
+      <button type="button" class="gender-pill ${formGender==='other' ? 'selected' : ''}" onclick="selectGender('other')">Other</button>
+    </div>
+    <button class="begin-btn" onclick="onBegin()">Begin</button>
+    <div class="input-error" id="input-error"></div>
+  </div>`;
+}
+
+function selectYear(y)  { formYear = y;  formStep = 'month';  render(); }
+function selectMonth(m) { formMonth = m; formStep = 'day';    render(); }
+function selectDay(d)   { formDay = d;   formStep = 'gender'; render(); }
+
+function selectGender(g) {
+  formGender = g;
+  document.querySelectorAll('#gender-pills .gender-pill').forEach(p => {
+    p.classList.toggle('selected', p.textContent.trim().toLowerCase() === g);
+  });
+}
+
+function stepBack() {
+  if (formStep === 'gender') formStep = 'day';
+  else if (formStep === 'day') formStep = 'month';
+  else if (formStep === 'month') formStep = 'year';
+  render();
+}
+
+function onBegin() {
+  const err = document.getElementById('input-error');
+  if (!formGender) { err.textContent = 'Please select a gender.'; return; }
+  const iso = formYear + '-' + String(formMonth + 1).padStart(2, '0') + '-' + String(formDay).padStart(2, '0');
+  // Final sanity check
+  const d = fromISO(iso);
+  const now = new Date();
+  if (d > now) { err.textContent = 'Birth date must be in the past.'; return; }
+  saveData({ birth: iso, gender: formGender });
+  skullMap = null;
+  skullMapH = 0;
+  resetForm();
+  render();
+}
+
+// ── Render: grid
+function renderGrid(data) {
+  const birthIso = data.birth;
+  const gender = data.gender || 'other';
+  const totalYears = LIFESPANS[gender] || LIFESPANS.other;
+  const totalWeeks = totalYears * WEEKS_PER_YEAR;
+
+  if (!skullMap || skullMapH !== totalYears) {
+    skullMap  = generateSkullMap(totalYears);
+    skullMapH = totalYears;
+  }
+
+  const lived = weeksLived(birthIso);
+  const age = ageInYears(birthIso);
+  const remaining = Math.max(0, totalWeeks - lived);
+  const cappedLived = Math.min(lived, totalWeeks);
+
+  let cells = '';
+  for (let i = 0; i < totalWeeks; i++) {
+    let cls = 'week';
+    if (i < cappedLived) {
+      cls += ' past';
+      if (skullMap[i]) cls += ' skull';
+    } else if (i === cappedLived && lived < totalWeeks) {
+      cls += ' current';
+    }
+    cells += `<div class="${cls}"></div>`;
+  }
+
+  document.getElementById('app').innerHTML = `
+    <div class="grid-wrap">
+      <p class="quote">
+        “This is our big mistake: to think we look forward to death. Most of death is already gone. Whatever time has passed is owned by death. We die every day.”
+        <span class="quote-attr">— Seneca</span>
+      </p>
+      <div class="stats">
+        <span class="stat"><strong>${age}</strong> years</span>
+        <span class="stat"><strong>${fmtNum(cappedLived)}</strong> weeks lived</span>
+        <span class="stat"><strong>${fmtNum(remaining)}</strong> weeks remaining</span>
+      </div>
+      <div class="grid">${cells}</div>
+      <button class="reset-link" onclick="onReset()">Reset</button>
+    </div>
+  `;
+}
+
+function onReset() {
+  if (!confirm('Reset and re-enter your birth date?')) return;
+  clearData();
+  skullMap = null;
+  skullMapH = 0;
+  resetForm();
+  render();
+}
+
+// ── Render entry
+function render() {
+  const data = loadData();
+  if (!data) renderInput();
+  else renderGrid(data);
+}
+
+render();
+</script>
+</body>
+</html>

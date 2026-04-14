@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Memento Mori — TRMNL</title>
+  <style>
+    /* ─────────────────────────────────────────────
+       TRMNL canvas — 800×480, 2-bit grayscale
+       Palette restricted to 4 levels:
+         #ffffff  white
+         #aaaaaa  light grey
+         #555555  dark grey
+         #000000  black
+       ───────────────────────────────────────────── */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --white: #ffffff;
+      --light: #aaaaaa;
+      --dark:  #555555;
+      --ink:   #000000;
+      --hair:  #d0d0d0; /* outline-only future cells */
+    }
+
+    html, body {
+      width: 800px;
+      height: 480px;
+      overflow: hidden;
+      background: var(--white);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .frame {
+      width: 800px;
+      height: 480px;
+      display: flex;
+      position: relative;
+    }
+
+    /* ── Left column ── */
+    .left {
+      width: 488px;
+      padding: 40px 32px 40px 48px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--dark);
+      margin-bottom: 36px;
+    }
+
+    .quote {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--dark);
+      max-width: 400px;
+      text-wrap: balance;
+    }
+
+    .quote-attr {
+      display: block;
+      margin-top: 10px;
+      font-style: normal;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--light);
+    }
+
+    .spacer { flex: 1; min-height: 16px; }
+
+    .stats {
+      display: flex;
+      gap: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--hair);
+    }
+
+    .stat-num {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-lbl {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dark);
+      line-height: 1.2;
+    }
+
+    /* ── Right column: the grid ── */
+    .right {
+      width: 312px;
+      height: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(52, 6px);
+      grid-template-rows:    repeat(80, 6px);
+      gap: 0;
+    }
+
+    .week {
+      width: 6px;
+      height: 6px;
+      box-sizing: border-box;
+      background: var(--white);
+      border: 1px solid var(--hair);
+    }
+
+    .week.past {
+      background: var(--light);
+      border-color: var(--light);
+    }
+
+    .week.skull {
+      background: var(--ink);
+      border-color: var(--ink);
+    }
+
+    .week.current {
+      background: var(--ink);
+      border-color: var(--ink);
+      position: relative;
+    }
+    .week.current::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 2px;
+      height: 2px;
+      background: var(--white);
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+
+    <!-- ── Left half: header / quote / stats ── -->
+    <div class="left">
+      <h1 class="title">MEMENTO MORI</h1>
+      <p class="subtitle">Remember Death</p>
+
+      <p class="quote">
+        “This is our big mistake: to think we look forward to death. Most of death is already gone. Whatever time has passed is owned by death.”
+        <span class="quote-attr">— Seneca</span>
+      </p>
+
+      <div class="spacer"></div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num" id="stat-age">—</div>
+          <div class="stat-lbl">Years</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-lived">—</div>
+          <div class="stat-lbl">Weeks lived</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-left">—</div>
+          <div class="stat-lbl">Weeks remaining</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right half: 52×80 week grid ── -->
+    <div class="right">
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG — for standalone testing.
+//
+// To use this file as a TRMNL Private Plugin, replace the two
+// constants below with Liquid merge variables wired to your
+// plugin's settings:
+//
+//   const BIRTH_DATE = "{{ birth_date }}";   // "YYYY-MM-DD"
+//   const TOTAL_YEARS = {{ lifespan | default: 80 }};
+//
+// The rest of the script can stay as-is — TRMNL renders the
+// page in a headless browser, so the JS runs once at render
+// time and the resulting DOM is captured to the e-ink image.
+// ─────────────────────────────────────────────
+const BIRTH_DATE  = "1990-06-15";
+const TOTAL_YEARS = 80;
+
+const WEEKS_PER_YEAR = 52;
+const TOTAL_WEEKS    = TOTAL_YEARS * WEEKS_PER_YEAR;
+const MS_PER_WEEK    = 7 * 24 * 60 * 60 * 1000;
+
+function fromISO(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function weeksLived(birth) {
+  const ms = Date.now() - birth.getTime();
+  return ms < 0 ? 0 : Math.floor(ms / MS_PER_WEEK);
+}
+
+function ageYears(birth) {
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return Math.max(0, age);
+}
+
+function fmt(n) { return n.toLocaleString('en-US'); }
+
+// ── Skull pixel map (52 wide × TOTAL_YEARS tall) ──
+function generateSkullMap() {
+  const W = WEEKS_PER_YEAR;
+  const H = TOTAL_YEARS;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const Y = (frac) => frac * H;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff';
+
+  // Cranium
+  ctx.beginPath();
+  ctx.ellipse(26, Y(0.375), 18, Y(0.275), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cheekbones
+  ctx.beginPath();
+  ctx.moveTo(7,  Y(0.525));
+  ctx.lineTo(45, Y(0.525));
+  ctx.lineTo(42, Y(0.675));
+  ctx.lineTo(10, Y(0.675));
+  ctx.closePath();
+  ctx.fill();
+
+  // Jaw
+  ctx.beginPath();
+  ctx.moveTo(13, Y(0.65));
+  ctx.lineTo(13, Y(0.775));
+  ctx.quadraticCurveTo(13, Y(0.9), 26, Y(0.913));
+  ctx.quadraticCurveTo(39, Y(0.9), 39, Y(0.775));
+  ctx.lineTo(39, Y(0.65));
+  ctx.closePath();
+  ctx.fill();
+
+  // Cut features back to background
+  ctx.fillStyle = '#000';
+
+  ctx.beginPath();
+  ctx.ellipse(17, Y(0.375), 6, Y(0.1), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(35, Y(0.375), 6, Y(0.1), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillRect(25, Y(0.35), 2, Y(0.05));
+
+  ctx.beginPath();
+  ctx.moveTo(26, Y(0.475));
+  ctx.lineTo(22, Y(0.6));
+  ctx.lineTo(30, Y(0.6));
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillRect(16, Y(0.7),   20, 1);
+  ctx.fillRect(16, Y(0.775), 20, 1);
+  for (let i = 0; i < 6; i++) {
+    ctx.fillRect(17 + i * 3, Y(0.7125), 1, Y(0.0625));
+  }
+
+  const data = ctx.getImageData(0, 0, W, H).data;
+  const map = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) {
+    map[i] = data[i * 4] > 128 ? 1 : 0;
+  }
+  return map;
+}
+
+// ── Render ──
+const birth       = fromISO(BIRTH_DATE);
+const lived       = weeksLived(birth);
+const cappedLived = Math.min(lived, TOTAL_WEEKS);
+const age         = ageYears(birth);
+const remaining   = Math.max(0, TOTAL_WEEKS - lived);
+
+document.getElementById('stat-age').textContent   = age;
+document.getElementById('stat-lived').textContent = fmt(cappedLived);
+document.getElementById('stat-left').textContent  = fmt(remaining);
+
+const skullMap = generateSkullMap();
+const grid = document.getElementById('grid');
+let html = '';
+for (let i = 0; i < TOTAL_WEEKS; i++) {
+  let cls = 'week';
+  if (i < cappedLived) {
+    cls += ' past';
+    if (skullMap[i]) cls += ' skull';
+  } else if (i === cappedLived && lived < TOTAL_WEEKS) {
+    cls += ' current';
+  }
+  html += `<div class="${cls}"></div>`;
+}
+grid.innerHTML = html;
+</script>
+</body>
+</html>
