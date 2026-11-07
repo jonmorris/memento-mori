@@ -256,6 +256,7 @@
       grid-template-columns: repeat(52, 12px);
       gap: 4px;
       margin-bottom: 28px;
+      background-repeat: no-repeat;
     }
 
     .week {
@@ -273,13 +274,6 @@
       background: #d8d8d8;
       border-color: #d8d8d8;
       transform: scale(0.78);
-    }
-
-    .week.past.skull {
-      background: var(--past);
-      border-color: var(--past);
-      transform: scale(1);
-      border-radius: 1.5px;
     }
 
     .week.current {
@@ -404,88 +398,49 @@ function resetForm() {
   formGender = '';
 }
 
-// ── Skull pixel map (52 wide × lifespan tall) ──
-let skullMap = null;
-let skullMapH = 0;
+// ── Pixel skull drawn behind the grid ──
+const SKULL_PIXELS = [
+  '......#########......',
+  '....#############....',
+  '...###############...',
+  '..#################..',
+  '.###################.',
+  '.###################.',
+  '#####################',
+  '#####################',
+  '#####################',
+  '##......#####......##',
+  '#.......#####.......#',
+  '#.......#####.......#',
+  '#.......#####.......#',
+  '##......#####......##',
+  '.##....#######....##.',
+  '..#######...#######..',
+  '..#######...#######..',
+  '...#######.#######...',
+  '...###############...',
+  '....#############....',
+  '....#.#.#.#.#.#.#....',
+  '....#.#.#.#.#.#.#....',
+  '....#############....',
+  '.....###########.....',
+  '......#########......',
+];
 
-function generateSkullMap(years) {
-  const W = WEEKS_PER_YEAR;
-  const H = years;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // Y-coordinate helper: proportional to grid height
-  const Y = (frac) => frac * H;
-
-  // Background (non-skull)
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, W, H);
-
-  // White skull silhouette
-  ctx.fillStyle = '#fff';
-
-  // Cranium — slightly squashed oval, top of grid
-  ctx.beginPath();
-  ctx.ellipse(26, Y(0.375), 18, Y(0.275), 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Cheekbones — wider band that flares out
-  ctx.beginPath();
-  ctx.moveTo(7,  Y(0.525));
-  ctx.lineTo(45, Y(0.525));
-  ctx.lineTo(42, Y(0.675));
-  ctx.lineTo(10, Y(0.675));
-  ctx.closePath();
-  ctx.fill();
-
-  // Jaw — rounded chin
-  ctx.beginPath();
-  ctx.moveTo(13, Y(0.65));
-  ctx.lineTo(13, Y(0.775));
-  ctx.quadraticCurveTo(13, Y(0.9), 26, Y(0.913));
-  ctx.quadraticCurveTo(39, Y(0.9), 39, Y(0.775));
-  ctx.lineTo(39, Y(0.65));
-  ctx.closePath();
-  ctx.fill();
-
-  // ── Cut out features (back to background) ──
-  ctx.fillStyle = '#000';
-
-  // Eye sockets — large dark ovals
-  ctx.beginPath();
-  ctx.ellipse(17, Y(0.375), 6, Y(0.1), 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(35, Y(0.375), 6, Y(0.1), 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Bridge between eye sockets darker line
-  ctx.fillRect(25, Y(0.35), 2, Y(0.05));
-
-  // Nose — inverted triangle / teardrop
-  ctx.beginPath();
-  ctx.moveTo(26, Y(0.475));
-  ctx.lineTo(22, Y(0.6));
-  ctx.lineTo(30, Y(0.6));
-  ctx.closePath();
-  ctx.fill();
-
-  // Mouth line + teeth gaps
-  ctx.fillRect(16, Y(0.7),   20, 1);
-  ctx.fillRect(16, Y(0.775), 20, 1);
-  for (let i = 0; i < 6; i++) {
-    ctx.fillRect(17 + i * 3, Y(0.7125), 1, Y(0.0625));
-  }
-
-  // Read pixels back
-  const data = ctx.getImageData(0, 0, W, H).data;
-  const map = new Uint8Array(W * H);
-  for (let i = 0; i < W * H; i++) {
-    map[i] = data[i * 4] > 128 ? 1 : 0; // 1 = skull, 0 = background
-  }
-  return map;
+// Each skull pixel covers a 2×2 block of week cells, centred in the grid,
+// with its edges falling in the middle of the 4px gaps between cells.
+function skullBackground(rows) {
+  const w = SKULL_PIXELS[0].length, h = SKULL_PIXELS.length;
+  let d = '';
+  SKULL_PIXELS.forEach((row, y) => {
+    for (let x = 0; x < w; x++) if (row[x] === '#') d += `M${x} ${y}h1v1h-1z`;
+  });
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges"><path fill="#b4b4b4" d="${d}"/></svg>`;
+  const pitch = 16; // 12px cell + 4px gap
+  const left = Math.floor((WEEKS_PER_YEAR - w * 2) / 2) * pitch - 2;
+  const top  = Math.floor((rows - h * 2) / 2) * pitch - 2;
+  return `background-image:url("data:image/svg+xml,${encodeURIComponent(svg)}");` +
+         `background-size:${w * 2 * pitch}px ${h * 2 * pitch}px;background-position:${left}px ${top}px`;
 }
 
 function loadData() {
@@ -643,8 +598,6 @@ function onBegin() {
   const now = new Date();
   if (d > now) { err.textContent = 'Birth date must be in the past.'; return; }
   saveData({ birth: iso, gender: formGender });
-  skullMap = null;
-  skullMapH = 0;
   resetForm();
   render();
 }
@@ -656,11 +609,6 @@ function renderGrid(data) {
   const totalYears = LIFESPANS[gender] || LIFESPANS.other;
   const totalWeeks = totalYears * WEEKS_PER_YEAR;
 
-  if (!skullMap || skullMapH !== totalYears) {
-    skullMap  = generateSkullMap(totalYears);
-    skullMapH = totalYears;
-  }
-
   const lived = weeksLived(birthIso);
   const age = ageInYears(birthIso);
   const remaining = Math.max(0, totalWeeks - lived);
@@ -669,13 +617,15 @@ function renderGrid(data) {
   let cells = '';
   for (let i = 0; i < totalWeeks; i++) {
     let cls = 'week';
+    let style = '';
     if (i < cappedLived) {
       cls += ' past';
-      if (skullMap[i]) cls += ' skull';
+      const l = Math.round(70 + Math.random() * 20); // random grey, 70–90% lightness
+      style = ` style="background:hsl(0 0% ${l}%);border-color:hsl(0 0% ${l}%)"`;
     } else if (i === cappedLived && lived < totalWeeks) {
       cls += ' current';
     }
-    cells += `<div class="${cls}"></div>`;
+    cells += `<div class="${cls}"${style}></div>`;
   }
 
   document.getElementById('app').innerHTML = `
@@ -689,7 +639,7 @@ function renderGrid(data) {
         <span class="stat"><strong>${fmtNum(cappedLived)}</strong> weeks lived</span>
         <span class="stat"><strong>${fmtNum(remaining)}</strong> weeks remaining</span>
       </div>
-      <div class="grid">${cells}</div>
+      <div class="grid" style='${skullBackground(totalYears)}'>${cells}</div>
       <button class="reset-link" onclick="onReset()">Reset</button>
     </div>
   `;
@@ -698,8 +648,6 @@ function renderGrid(data) {
 function onReset() {
   if (!confirm('Reset and re-enter your birth date?')) return;
   clearData();
-  skullMap = null;
-  skullMapH = 0;
   resetForm();
   render();
 }
